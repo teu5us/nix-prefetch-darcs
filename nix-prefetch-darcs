@@ -1,0 +1,81 @@
+#!/usr/bin/env bash
+
+set -e
+
+url=$1
+tagflag=$2
+expHash=$3
+
+hashType=$NIX_HASH_ALGO
+if [ -z "$hashType" ]; then
+    hashType=sha256
+fi
+
+if [ -z "$hashFormat" ]; then
+    hashFormat=--base32
+fi
+
+if [ -z "$url" ]; then
+    echo "syntax: nix-prefetch-darcs URL [REVISION [EXPECTED-HASH]]" >&2
+    exit 1
+fi
+
+tagdata="${tagflag##*:}"
+
+if [[ "$tagflag" =~ "patch:*" ]]; then
+   tagflags="--to-hash=$tagdata"
+elif [[ "$tagflag" =~ "tag:*" ]]; then
+    tagflags="--tag=$tagdata"
+elif [[ "$tagflag" =~ "context:*" ]]; then
+    tagflags="--context=$tagdata"
+fi
+
+if [[ "$url" =~ ".*/" ]]; then
+    url=${url%/}
+fi
+
+repoName=$(echo $url | sed 's,.*/\(.*\)$,\1,')
+tagname="${tagflag%%:*}"
+tagtext="$tagname-$tagdata"
+dstFile="${repoName}-${tagtext:HEAD}"
+
+if [ -n "$expHash" ]; then
+   finalPath=$(nix-store --print-fixed-path --recursive "$hashType" "$expHash" $dstFile)
+   if ! nix-store --check-validity "$finalPath" 2> /dev/null; then
+       finalPath=
+   fi
+   hash=$expHash
+fi
+
+if [ -z "$finalPath" ]; then
+    tmpPath="$(mktemp -d "${TMPDIR:-/tmp/darcs-checkout-tmp-XXXXXXXX}")"
+    trap "rm -rf \"$tmpPath\"" EXIT
+
+    tmpFile="$tmpPath/$dstFile"
+
+    darcs clone --lazy $tagflags --repodir="$tmpFile" "$url" 2>/dev/null 1>/dev/null
+    patch="$(darcs log --max-count=1 --repodir="$tmpFile" | grep 'patch' | cut -d' ' -f2)"
+    if [ ! -n "$QUIET" ]; then echo "patch:$patch"; fi
+
+    rm -rf "$tmpFile/darcs"
+
+    newTmpFile="$tmpPath/$repoName-$patch"
+    mv "$tmpFile" "$newTmpFile"
+    tmpFile="$newTmpFile"
+
+    hash=$(nix-hash --type $hashType $hashFormat $tmpFile)
+    if [ ! -n "$QUIET" ]; then echo "hash:$hash"; fi
+
+    finalPath=$(nix-store --add-fixed --recursive "$hashType" $tmpFile)
+
+    if test -n "$expHash" -a "$expHash" != "$hash"; then
+        echo "hash mismatch for URL \`$url'"
+        exit 1
+    fi
+fi
+
+if [ ! -n "$QUIET" ]; then echo "path:$finalPath"; fi
+
+echo $hash
+
+if [ -n "$PRINT_PATH" ]; then echo $finalPath; fi
