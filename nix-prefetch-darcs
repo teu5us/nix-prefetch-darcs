@@ -55,7 +55,7 @@ if [ -z "$finalPath" ]; then
 
     darcs clone --lazy $tagflags --repodir="$tmpFile" "$url" 2>/dev/null 1>/dev/null
     patch="$(darcs log --max-count=1 --repodir="$tmpFile" | grep 'patch' | cut -d' ' -f2)"
-    if [ ! -n "$QUIET" ]; then echo "patch:$patch"; fi
+    echo "darcs revision is $patch"
 
     rm -rf "$tmpFile/darcs"
 
