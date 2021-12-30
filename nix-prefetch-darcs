@@ -30,7 +30,7 @@ elif [[ "$tagflag" =~ "context:*" ]]; then
     tagflags="--context=$tagdata"
 fi
 
-if [[ "$url" =~ ".*/" ]]; then
+if [[ "$url" =~ .*/ ]]; then
     url=${url%/}
 fi
 
