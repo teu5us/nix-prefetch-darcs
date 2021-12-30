@@ -19,7 +19,7 @@ with pkgs;
     name = "nix-prefetch-darcs";
     nativeBuildInputs = [ makeWrapper ];
     buildInputs = [ darcs gnused nix ];
-    src = ./.;
+    src = ./nix-prefetch-darcs;
     dontUnpack = true;
     preferLocalBuild = true;
     installPhase = ''
