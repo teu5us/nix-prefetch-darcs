@@ -15,9 +15,8 @@ with pkgs;
 
       inherit url rev context patch;
     };
-  nix-prefetch-darcs = stdenv.mkDerivation {
+  nix-prefetch-darcs = stdenv.mkDerivation rec {
     name = "nix-prefetch-darcs";
-    version = "0.0.1";
     nativeBuildInputs = [ makeWrapper ];
     buildInputs = [ darcs gnused nix ];
     src = ./.;
